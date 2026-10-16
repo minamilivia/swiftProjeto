@@ -25,34 +25,35 @@ struct ServicoPinguins {
                 let (dados, resposta) = try await URLSession.shared.data(from: endereco)
                 try validar(resposta)
                 let resultado = try JSONDecoder().decode(RespostaAPI.self, from: dados)
+                let enderecoImagem = corrigirEndereco(resultado.imagem, especie: resultado.especie)
                 guard resultado.especie == categoria.rawValue,
-                      resultado.imagem.scheme == "https",
-                      !fotosInvalidas.contains(resultado.imagem) else { continue }
+                      enderecoImagem.scheme == "https",
+                      !fotosInvalidas.contains(enderecoImagem) else { continue }
 
-                if !fotosValidas.contains(resultado.imagem) {
+                if !fotosValidas.contains(enderecoImagem) {
                     do {
-                        let (foto, respostaFoto) = try await URLSession.shared.data(from: resultado.imagem)
+                        let (foto, respostaFoto) = try await URLSession.shared.data(from: enderecoImagem)
                         try validar(respostaFoto)
                         guard let origem = CGImageSourceCreateWithData(foto as CFData, nil),
                               CGImageSourceCreateImageAtIndex(origem, 0, nil) != nil else {
-                            fotosInvalidas.insert(resultado.imagem)
+                            fotosInvalidas.insert(enderecoImagem)
                             continue
                         }
-                        let requisicao = URLRequest(url: resultado.imagem)
+                        let requisicao = URLRequest(url: enderecoImagem)
                         URLCache.shared.storeCachedResponse(
                             CachedURLResponse(response: respostaFoto, data: foto),
                             for: requisicao
                         )
-                        fotosValidas.insert(resultado.imagem)
+                        fotosValidas.insert(enderecoImagem)
                     } catch {
                         try Task.checkCancellation()
                         ultimoErro = error
-                        fotosInvalidas.insert(resultado.imagem)
+                        fotosInvalidas.insert(enderecoImagem)
                         continue
                     }
                 }
 
-                pinguins.append(Pinguim(id: UUID(), enderecoImagem: resultado.imagem, especie: resultado.especie))
+                pinguins.append(Pinguim(id: UUID(), enderecoImagem: enderecoImagem, especie: resultado.especie))
                 if pinguins.count == 5 { break }
             } catch {
                 try Task.checkCancellation()
@@ -65,6 +66,18 @@ struct ServicoPinguins {
         }
         guard !pinguins.isEmpty else { throw ultimoErro }
         return pinguins
+    }
+
+    private func corrigirEndereco(_ endereco: URL, especie: String) -> URL {
+        guard especie == "erect-crested",
+              var componentes = URLComponents(url: endereco, resolvingAgainstBaseURL: false) else {
+            return endereco
+        }
+        componentes.path = componentes.path.replacingOccurrences(
+            of: "/img/erect-crested/",
+            with: "/img/erect_crested/"
+        )
+        return componentes.url ?? endereco
     }
 
     private func validar(_ resposta: URLResponse) throws {

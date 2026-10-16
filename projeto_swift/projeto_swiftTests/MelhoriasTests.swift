@@ -10,7 +10,8 @@ final class MelhoriasTests: XCTestCase {
         XCTAssertEqual(resposta.imagem.absoluteString, "https://example.com/foto.jpg")
     }
 
-    func testBuscaFotosReaisDasTresCategorias() async throws {
+    func testBuscaFotosReaisDasSeisCategorias() async throws {
+        XCTAssertEqual(Categoria.allCases.count, 6)
         for categoria in Categoria.allCases {
             let pinguins = try await ServicoPinguins().buscar(categoria: categoria)
             XCTAssertFalse(pinguins.isEmpty)
