@@ -1,7 +1,11 @@
+import Foundation
 
-import SwiftUI
+struct RespostaAPI: Decodable {
+    let imagem: URL
+    let especie: String
 
-struct PinguinAPIResponde:Decodable{
-    let resposta:[String]
-    let status:String
+    enum CodingKeys: String, CodingKey {
+        case imagem = "img"
+        case especie = "species"
+    }
 }
